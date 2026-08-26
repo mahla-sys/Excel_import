@@ -1,0 +1,44 @@
+# Caddy reverse proxy for the School Data Intake Portal.
+#
+# Replace IMPORT_DOMAIN below with the real DNS name (e.g.
+# import.yourschool.ir). Caddy automatically provisions and renews a
+# Let's Encrypt certificate. In DNS is not ready yet, Caddy falls back
+# to its internal CA and issues untrusted certs — see the deployment
+# guide.
+#
+# The frontend container serves the built React app on port 80 and also
+# proxies /api, /admin, /static to the backend container over the
+# internal Docker network. We only need to expose Caddy (80/443) to
+# the Internet.
+
+{
+	email ops@example.com
+	# Uncomment during the first DNS setup to avoid hitting Let's Encrypt
+	# rate limits before the domain resolves:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Caddy reads the real domain from the DOMAIN environment variable
+# (provided by docker-compose.prod.yml). The {$DOMAIN} syntax is Caddy's
+# native environment-variable expansion — do not hardcode the host here.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Remove server fingerprint
+		-Server
+	}
+
+	# API and Django admin go to the backend.
+	@api path /api/* /admin/* /static/*
+	reverse_proxy @api backend:8000
+
+	# Everything else (the SPA) is served by the frontend.
+	reverse_proxy frontend:80
+}

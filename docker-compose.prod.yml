@@ -1,0 +1,88 @@
+# Production Docker Compose stack for the School Data Intake Portal.
+#
+# Usage:
+#   1. Copy .env.example to .env and set strong secrets.
+#   2. Build and start:
+#        docker compose -f docker-compose.prod.yml up -d --build
+#   3. Create the first system admin:
+#        docker compose -f docker-compose.prod.yml exec backend \
+#          python manage.py createsuperuser
+#
+# Only ports 80/443 (on Caddy) are exposed to the host. PostgreSQL and
+# Django are reachable only on the internal Docker network.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-intake}
+      POSTGRES_USER: ${POSTGRES_USER:-intake}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No port mapping — only other containers can reach the DB.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-intake} -d ${POSTGRES_DB:-intake}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-intake}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-intake}
+      DJANGO_SETTINGS_MODULE: config.settings
+    volumes:
+      - private_files:/data/private_files
+      - static_files:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    # No port mapping — Caddy reaches this on the Docker network.
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application
+             --bind 0.0.0.0:8000 --workers 3 --timeout 120"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # The SPA only uses relative paths; no API URL baked in.
+        VITE_API_BASE: /api/v1
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # nginx serves on port 80 (internal only — Caddy proxies to it).
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN (e.g. import.example.com)}
+
+volumes:
+  pgdata:
+  private_files:
+  static_files:
+  caddy_data:
+  caddy_config:
