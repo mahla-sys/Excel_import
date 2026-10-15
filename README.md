@@ -1,3 +1,4 @@
+
 # پرتال مرکزی ورود، استانداردسازی و بررسی داده مدارس
 
 پروژه‌ای **مستقل** برای جمع‌آوری، استانداردسازی و اعتبارسنجی فایل‌های Excel
@@ -6,6 +7,34 @@
 > فلسفه‌ی پروژه: اکسل مدرسه یک ورودی نامنظم است؛ این پرتال آن را بدون حذف
 > بی‌صدا، بدون ادغام اشتباه افراد و بدون وابستگی به تصمیم‌های نهایی سیستم
 > اصلی، به داده‌ای امن، استاندارد، قابل‌پیگیری و آماده‌ی آینده تبدیل می‌کند.
+
+---
+
+## 🖼 نمای محیط پروژه (Screenshots)
+
+#### ۱. نمای کلی داشبورد مدارس
+*پایش وضعیت فایل‌های ورودی و صف بررسی داده‌ها در هر مدرسه*
+![School Intake Dashboard](docs/school-intake-dashboard.png)
+
+#### ۲. موتور نگاشت هوشمند ستون‌ها (Smart Column Mapping)
+*تشخیص خودکار ستون‌های همنام (کد ملی دانش‌آموز، پدر، مادر) بر اساس موقعیت مکانی*
+![Smart Column Mapping](docs/smart-column-mapping.png)
+
+#### ۳. اعتبارسنجی و دسته‌بندی داده‌های استخراج‌شده
+*خروجی پایپ‌لاین: تفکیک خودکار رکوردهای معتبر و ناقص بدون حذف داده خام*
+![Student Extraction Validation](docs/student-extraction-validation.png)
+
+#### ۴. مدیریت Batchها و تاریخچه آپلود
+*رهگیری فایل‌های آپلود شده در سال‌های تحصیلی مختلف*
+![Batch Management History](docs/batch-management-history.png)
+
+---
+
+## 🚀 استک فنی (Tech Stack)
+- **بک‌اند:** Python 3.11, Django 5, Django REST Framework, SimpleJWT
+- **فرانت‌اند:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Table
+- **دیتابیس:** PostgreSQL 16
+- **زیرساخت:** Docker, Docker Compose, Caddy (Reverse Proxy)
 
 ---
 
@@ -292,3 +321,4 @@ docker compose exec -T db pg_dump -U intake -d school_intake -Fc > backups/db.du
   - فیلد `must_change_password` در خروجی `/auth/me/`
   - **۷۰ تست پاس** (۵ تست جدید برای جریان تغییر رمز)
   - هر ۱۸ معیار پذیرش تیک خوردند
+
